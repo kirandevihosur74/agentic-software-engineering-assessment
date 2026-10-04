@@ -13,6 +13,10 @@ A Python prototype that uses Temporal to coordinate Claude-generated code change
 
 [Evidence and verification](docs/verification.md) distinguishes application tests from orchestration tests. New Claude runs include Bandit and dependency vulnerability scanning. See [security and signed approvals](docs/security-and-approvals.md) for setup and policy; historical reports retain their original check scope.
 
+## Evidence screenshots
+
+[View the Temporal screenshots and captions](evidence/screenshots/README.md) for the workflow overview, requirement-change timeline, and completed demo execution.
+
 ## Install
 
 Requires Python 3.11+, the Temporal CLI, running Docker, and Anthropic API access for Claude mode. The tested dependency snapshot was verified with Python 3.13 on macOS.

@@ -92,6 +92,8 @@ TEMPORAL_TEST_ADDRESS=localhost:7233 pytest -q
 
 ## Evidence and source guide
 
+[Temporal screenshots](evidence/screenshots/README.md) provide a visual overview of the local orchestration runs. Captions distinguish demo-mode screenshots from live Claude scenario reports.
+
 - [Greenfield report](evidence/greenfield/report.json) and [generated code](evidence/greenfield/generated-shortener/).
 - [Brownfield final report](evidence/brownfield/report.json) and [final generated code](evidence/brownfield/revision-3-applied/).
 - [Separate ambiguity report](evidence/ambiguous/report.json), [generated code](evidence/ambiguous/generated-shortener/), and [security scan](evidence/ambiguous/security-scan.json).

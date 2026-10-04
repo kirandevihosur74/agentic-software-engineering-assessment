@@ -10,7 +10,7 @@
 - [x] Docker image rebuilt and generated application checks rerun.
 - [x] Clean archive prepared with source, tests, documentation, and evidence.
 
-The archive excludes credentials, environments, caches, local databases, and raw working artifact directories. `MANIFEST.sha256` lists the included files and their hashes.
+The archive excludes credentials, environments, caches, local databases, and raw working artifact directories.
 
 Sending the archive to the recruiter remains the user's action. This submission demonstrates a local prototype; production security and deployment features are not claimed.
 

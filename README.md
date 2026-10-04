@@ -56,7 +56,7 @@ The application uses `SHORTENER_DB` for the SQLite path and defaults to `shorten
 
 ## Workflow modes
 
-`--provider claude` generates real code proposals. The default `demo` adapter exercises control flow without paid model calls and writes a demo JSON artifact. [Control examples](docs/day2.md) cover that mode.
+`--provider claude` generates real code proposals. The default `demo` adapter exercises control flow without paid model calls and writes a demo JSON artifact. [Control examples](docs/workflow-controls.md) cover that mode.
 
 To extend an approved completed run in a separate workspace:
 

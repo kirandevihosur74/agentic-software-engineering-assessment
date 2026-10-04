@@ -90,7 +90,7 @@ Proposals allow only bounded relative paths with approved extensions. Hidden fil
 
 Tests run independently of Claude's claims. The security gate verifies proposal integrity, scans Python with Bandit, and audits test-image dependencies with pip-audit. Claude review decisions require signatures. See [security and approvals](security-and-approvals.md). Production endpoint authorization, artifact storage, and broader security assurance remain outstanding. Actual generated-code results are recorded under `evidence/`.
 
-Tests that stub the SDK prove integration behavior without paid calls. They are separate from the completed live Claude runs under `evidence/` and the earlier SDK smoke test recorded in `claude-smoke.json`.
+Tests that stub the SDK prove integration behavior without paid calls. They are separate from the completed live Claude runs under `evidence/`.
 
 ## References
 

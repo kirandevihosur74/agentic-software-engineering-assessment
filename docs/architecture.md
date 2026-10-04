@@ -25,7 +25,7 @@ Requirement changes are accepted through version-checked Updates. They invalidat
 
 Each Activity uses a named operation dispatcher. The workflow enforces order, joins, repair budgets, deadlines, and gates. Immutable proposals, snapshots, and applied files live outside Temporal history. The workflow records references, hashes, structured decisions, and counters. Shortener HTTP requests are separate from the engineering workflow.
 
-Read [Day 2 controls](day2.md) for exact command examples, metric definitions, recovery behavior, trust boundaries, and remaining limitations. The default agent remains a demo adapter. The optional Claude Agent SDK provider generates schema-validated file proposals with explicit context transfer; see claude.md. The scaffold shortener routes remain placeholders. Docker execution passed in both live demonstrations; Claude approval signatures are verified by an Activity against the worker trust file; production Temporal endpoint authorization remains outstanding.
+Read [Workflow controls](workflow-controls.md) for exact command examples, metric definitions, recovery behavior, trust boundaries, and remaining limitations. The default agent remains a demo adapter. The optional Claude Agent SDK provider generates schema-validated file proposals with explicit context transfer; see claude.md. The scaffold shortener routes remain placeholders. Docker execution passed in both live demonstrations; Claude approval signatures are verified by an Activity against the worker trust file; production Temporal endpoint authorization remains outstanding.
 
 ## Local files
 
@@ -33,7 +33,7 @@ Read [Day 2 controls](day2.md) for exact command examples, metric definitions, r
 
 ## Compatibility
 
-The Day 2 workflow changes the command history and Activity definitions. Start fresh development runs rather than replaying histories from the initial scaffold. Production worker versioning is future work.
+Workflow changes can alter command history and Activity definitions. Start fresh development runs rather than replaying histories from the initial scaffold. Production worker versioning is future work.
 
 ## References
 

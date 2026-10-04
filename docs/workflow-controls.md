@@ -1,10 +1,10 @@
-# Day 2 workflow controls
+# Workflow controls
 
-For the subsequently added live provider, see [Claude SDK integration](claude.md). This page documents the Day 2 demo mode.
+These examples use the free demo adapter to exercise workflow controls. For real code generation, see [Claude setup](claude.md) and [signed approvals](security-and-approvals.md).
 
 ## Scope
 
-Day 2 adds real Temporal control flow and actual isolated file operations. In this demo mode, the model adapter and validation results are simulated. Claude mode separately generates and validates real applications; see the completed evidence in the submission overview.
+Both providers use Temporal control flow and isolated file operations. In this demo mode, the model adapter and validation results are simulated. Claude mode separately generates and validates real applications; see the completed evidence in the submission overview.
 
 The demo writes a JSON change artifact under an isolated run directory. It does not modify the scaffold source or deploy anything. A workflow run gets a separate directory derived from its workflow and run identifiers.
 
@@ -31,7 +31,7 @@ engineering review --id controls-1 --revision 2 --gate review --reviewer local-u
 engineering result --id controls-1
 ```
 
-Run status between decisions and wait for the matching gate. Early, duplicate, wrong-gate, or stale decisions are rejected. A reviewer name is a local label, not an authenticated identity.
+Run status between decisions and wait for the matching gate. Early, duplicate, wrong-gate, or stale decisions are rejected. Demo approvals use a reviewer label; Claude approvals require a verified signature.
 
 ## Clarification and requirement changes
 
@@ -54,7 +54,7 @@ engineering stop --id privacy-1 --reason 'Pause this work for manual review'
 The stop command ends the run after active Activities finish and applied files are restored. It does not provide a resumable pause. Use a new run to continue after a terminal stop.
 
 - Apply and final-review gates default to a 24-hour deadline; `--approval-timeout` configures 1 through 86400 seconds for demonstrations.
-- Transient Activity failures have at most three attempts and a 100-second overall deadline.
+- Demo Activity failures have at most three attempts and a 100-second overall deadline. Claude Activities use one attempt and a 310-second overall deadline.
 - Validation failure allows at most two repair cycles per requirement version. Every repaired proposal needs fresh apply approval.
 - Rejection, timeout, exhausted repair budget, or explicit stop restores any applied changes to that version's baseline.
 - Snapshot creation, proposal creation, file replacement, and restoration tolerate Activity retries. Restoration is per file, not a multi-file filesystem transaction.
@@ -67,7 +67,7 @@ The stop command ends the run after active Activities finish and applied files a
 
 The dispatcher accepts only named operations implemented in code. Files are confined to the configured run directory, with traversal and symlinks rejected and bounded artifact sizes. Proposals are immutable and checked against the approved hash before application; validation checks the applied file against the same hash.
 
-The command helper allows only `python_syntax`, using a fixed isolated Python process that parses input with `ast.parse`; it never executes supplied code or arbitrary shell commands. It has a maximum five-second deadline and a minimal environment. This provides a narrow example of command policy, not an execution sandbox for future generated tests.
+The command helper allows only `python_syntax`, using a fixed isolated Python process that parses input with `ast.parse`; it never executes supplied code or arbitrary shell commands. It has a maximum five-second deadline and a minimal environment. Generated tests use a separate restricted Docker runner; see [Claude setup](claude.md).
 
 Credential-shaped text is rejected at the CLI before submission and checked again in workflow handlers. Audit details are redacted. Pattern matching is incomplete and cannot guarantee secret detection. Direct SDK callers can put inputs in Temporal history before workflow validation; never submit credentials as workflow data. Production use requires authenticated callers, authorization, restricted Temporal access, payload encryption/redaction policy, and a proper sandbox for generated code.
 
@@ -92,6 +92,6 @@ Export each run once for aggregation. Duplicate files count as duplicate observa
 
 ## Scope beyond the local prototype
 
-The Claude provider, context transfer, Docker test execution, and generated shortener examples are implemented and demonstrated. Authenticated policy enforcement, comprehensive security scanning, shared durable artifact storage, and production worker versioning remain future work.
+The Claude provider, context transfer, Docker test execution, and generated shortener examples are implemented and demonstrated. Production endpoint authorization, broader security assurance, shared durable artifact storage, and worker versioning remain future work.
 
 Use fresh workflow IDs when trying these examples. Workflow-code changes may not replay old histories; retain compatible workers for unfinished runs.

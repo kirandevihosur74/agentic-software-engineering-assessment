@@ -1,0 +1,299 @@
+--- baseline/app/db.py
++++ proposed/app/db.py
+@@ -4,7 +4,8 @@
+ CREATE TABLE IF NOT EXISTS links (
+     code TEXT PRIMARY KEY,
+     url TEXT NOT NULL,
+-    clicks INTEGER NOT NULL DEFAULT 0
++    clicks INTEGER NOT NULL DEFAULT 0,
++    expires_at REAL
+ )
+ """
+ 
+@@ -15,10 +16,21 @@
+     return conn
+ 
+ 
++def _has_column(conn: sqlite3.Connection) -> bool:
++    return any(r["name"] == "expires_at" for r in conn.execute("PRAGMA table_info(links)").fetchall())
++
++
+ def init_db(db_path: str) -> None:
+     conn = connect(db_path)
+     try:
+         conn.execute(SCHEMA)
+         conn.commit()
++        if not _has_column(conn):
++            try:
++                conn.execute("ALTER TABLE links ADD COLUMN expires_at REAL")
++                conn.commit()
++            except sqlite3.OperationalError:
++                if not _has_column(conn):
++                    raise
+     finally:
+         conn.close()
+--- baseline/app/main.py
++++ proposed/app/main.py
+@@ -1,5 +1,6 @@
+ import os
+ import sqlite3
++import time
+ from urllib.parse import urlparse
+ 
+ from fastapi import FastAPI, HTTPException, Request
+@@ -9,6 +10,7 @@
+ from .db import connect, init_db
+ 
+ MAX_RETRIES = 10
++MAX_TTL = 86400
+ 
+ 
+ def _valid_url(url) -> bool:
+@@ -21,10 +23,15 @@
+         return False
+ 
+ 
+-def create_app(db_path=None, code_generator=None) -> FastAPI:
++def _valid_ttl(ttl) -> bool:
++    return type(ttl) is int and 1 <= ttl <= MAX_TTL
++
++
++def create_app(db_path=None, code_generator=None, clock=None) -> FastAPI:
+     path = db_path or os.environ.get("SHORTENER_DB", "shortener.db")
+     path = str(path)
+     init_db(path)
++    now_fn = clock if clock is not None else time.time
+     app = FastAPI(title="URL Shortener")
+ 
+     def gen():
+@@ -41,12 +48,23 @@
+         url = body.get("url") if isinstance(body, dict) else None
+         if not _valid_url(url):
+             return JSONResponse({"detail": "url must be a valid http/https URL"}, status_code=422)
++        expires_at = None
++        if "ttl_seconds" in body:
++            ttl = body["ttl_seconds"]
++            if not _valid_ttl(ttl):
++                return JSONResponse(
++                    {"detail": "ttl_seconds must be an integer from 1 to 86400"}, status_code=422
++                )
++            expires_at = float(now_fn()) + ttl
+         conn = connect(path)
+         try:
+             for _ in range(MAX_RETRIES):
+                 code = gen()
+                 try:
+-                    conn.execute("INSERT INTO links (code, url, clicks) VALUES (?, ?, 0)", (code, url))
++                    conn.execute(
++                        "INSERT INTO links (code, url, clicks, expires_at) VALUES (?, ?, 0, ?)",
++                        (code, url, expires_at),
++                    )
+                     conn.commit()
+                 except sqlite3.IntegrityError:
+                     conn.rollback()
+@@ -65,9 +83,14 @@
+ 
+     @app.get("/r/{code}")
+     def redirect(code: str):
++        now = float(now_fn())
+         conn = connect(path)
+         try:
+-            cur = conn.execute("UPDATE links SET clicks = clicks + 1 WHERE code = ?", (code,))
++            cur = conn.execute(
++                "UPDATE links SET clicks = clicks + 1 "
++                "WHERE code = ? AND (expires_at IS NULL OR expires_at > ?)",
++                (code, now),
++            )
+             conn.commit()
+             if cur.rowcount == 0:
+                 raise HTTPException(status_code=404, detail="not found")
+@@ -80,11 +103,18 @@
+     def stats(code: str):
+         conn = connect(path)
+         try:
+-            row = conn.execute("SELECT code, url, clicks FROM links WHERE code = ?", (code,)).fetchone()
++            row = conn.execute(
++                "SELECT code, url, clicks, expires_at FROM links WHERE code = ?", (code,)
++            ).fetchone()
+         finally:
+             conn.close()
+         if row is None:
+             raise HTTPException(status_code=404, detail="not found")
+-        return {"code": row["code"], "url": row["url"], "clicks": row["clicks"]}
++        return {
++            "code": row["code"],
++            "url": row["url"],
++            "clicks": row["clicks"],
++            "expires_at": row["expires_at"],
++        }
+ 
+     return app
+--- baseline/tests/test_links.py
++++ proposed/tests/test_links.py
+@@ -45,7 +45,7 @@
+     for _ in range(3):
+         client.get(f"/r/{code}", follow_redirects=False)
+     s = client.get(f"/links/{code}/stats").json()
+-    assert s == {"code": code, "url": URL, "clicks": 3}
++    assert s == {"code": code, "url": URL, "clicks": 3, "expires_at": None}
+ 
+ 
+ @pytest.mark.parametrize(
+--- baseline/tests/test_ttl.py
++++ proposed/tests/test_ttl.py
+@@ -0,0 +1,78 @@
++import pytest
++from fastapi.testclient import TestClient
++
++from app.main import create_app
++
++URL = "https://example.com/x"
++
++
++class Clock:
++    def __init__(self, t=1000.0):
++        self.t = t
++
++    def __call__(self):
++        return self.t
++
++
++@pytest.fixture
++def clock():
++    return Clock()
++
++
++@pytest.fixture
++def c(db_path, clock):
++    return TestClient(create_app(db_path, clock=clock))
++
++
++def make(c, ttl):
++    return c.post("/links", json={"url": URL, "ttl_seconds": ttl})
++
++
++@pytest.mark.parametrize("ttl", [True, False, "10", 5.0, 1.5, 0, -1, 86401, None, [1]])
++def test_invalid_ttl(c, ttl):
++    assert make(c, ttl).status_code == 422
++
++
++@pytest.mark.parametrize("ttl", [1, 86400])
++def test_valid_ttl_bounds(c, ttl):
++    assert make(c, ttl).status_code == 201
++
++
++def test_non_expiring(c, clock):
++    code = c.post("/links", json={"url": URL}).json()["code"]
++    clock.t = 10**10
++    assert c.get(f"/r/{code}", follow_redirects=False).status_code == 302
++    assert c.get(f"/links/{code}/stats").json()["expires_at"] is None
++
++
++def test_boundary(c, clock):
++    code = make(c, 10).json()["code"]
++    assert c.get(f"/links/{code}/stats").json()["expires_at"] == 1010.0
++    clock.t = 1009
++    assert c.get(f"/r/{code}", follow_redirects=False).status_code == 302
++    clock.t = 1010
++    assert c.get(f"/r/{code}", follow_redirects=False).status_code == 404
++    clock.t = 2000
++    assert c.get(f"/r/{code}", follow_redirects=False).status_code == 404
++
++
++def test_expired_clicks_not_counted_and_stats_available(c, clock):
++    code = make(c, 5).json()["code"]
++    c.get(f"/r/{code}", follow_redirects=False)
++    clock.t = 1005
++    for _ in range(3):
++        assert c.get(f"/r/{code}", follow_redirects=False).status_code == 404
++    r = c.get(f"/links/{code}/stats")
++    assert r.status_code == 200
++    assert r.json() == {"code": code, "url": URL, "clicks": 1, "expires_at": 1005.0}
++
++
++def test_fractional_boundary(db_path):
++    clock = Clock(1000.5)
++    c = TestClient(create_app(db_path, clock=clock))
++    code = make(c, 1).json()["code"]
++    assert c.get(f"/links/{code}/stats").json()["expires_at"] == 1001.5
++    clock.t = 1001.4999
++    assert c.get(f"/r/{code}", follow_redirects=False).status_code == 302
++    clock.t = 1001.5
++    assert c.get(f"/r/{code}", follow_redirects=False).status_code == 404
+--- baseline/tests/test_migration.py
++++ proposed/tests/test_migration.py
+@@ -0,0 +1,43 @@
++import sqlite3
++
++from fastapi.testclient import TestClient
++
++from app.db import init_db
++from app.main import create_app
++
++
++def legacy(path):
++    conn = sqlite3.connect(path)
++    conn.execute("CREATE TABLE links (code TEXT PRIMARY KEY, url TEXT NOT NULL, clicks INTEGER NOT NULL DEFAULT 0)")
++    conn.execute("INSERT INTO links VALUES ('OLDCODE', 'https://old.example/', 7)")
++    conn.execute("INSERT INTO links VALUES ('OLD2222', 'https://old2.example/', 0)")
++    conn.commit()
++    conn.close()
++
++
++def rows(path):
++    conn = sqlite3.connect(path)
++    try:
++        return conn.execute("SELECT code, url, clicks, expires_at FROM links ORDER BY code").fetchall()
++    finally:
++        conn.close()
++
++
++def test_migration_preserves_data_and_is_idempotent(db_path):
++    legacy(db_path)
++    init_db(db_path)
++    init_db(db_path)
++    assert rows(db_path) == [
++        ("OLD2222", "https://old2.example/", 0, None),
++        ("OLDCODE", "https://old.example/", 7, None),
++    ]
++
++
++def test_legacy_links_still_work(db_path):
++    legacy(db_path)
++    create_app(db_path)
++    c = TestClient(create_app(db_path, clock=lambda: 10**12))
++    r = c.get("/r/OLDCODE", follow_redirects=False)
++    assert r.status_code == 302
++    s = c.get("/links/OLDCODE/stats").json()
++    assert s == {"code": "OLDCODE", "url": "https://old.example/", "clicks": 8, "expires_at": None}
+--- baseline/README.md
++++ proposed/README.md
+@@ -0,0 +1,28 @@
++# URL Shortener
++
++FastAPI + SQLite URL shortener.
++
++## Setup
++
++Requires Python 3 with `fastapi`, `uvicorn` (to serve), `pytest` and `httpx` installed.
++
++## Environment
++
++- `SHORTENER_DB`: path of the SQLite database file (default `shortener.db`).
++  Existing databases are migrated automatically on startup (adds a nullable
++  `expires_at` column; existing links never expire).
++
++## Run
++
++    SHORTENER_DB=shortener.db uvicorn app.main:create_app --factory
++
++## API
++
++- `POST /links` body `{"url": "https://...", "ttl_seconds": 60}`; `ttl_seconds` is optional
++  and must be an integer from 1 to 86400. Returns 201 with `code`, `short_url`, `url`.
++- `GET /r/{code}` returns 302, or 404 when unknown or expired (now >= expires_at).
++- `GET /links/{code}/stats` returns `code`, `url`, `clicks`, `expires_at` (null if none).
++
++## Tests
++
++    pytest

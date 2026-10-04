@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-engineering"
+version = "0.1.0"
+description = "Temporal-based engineering workflow scaffold"
+requires-python = ">=3.11"
+dependencies = ["temporalio>=1.9,<2", "fastapi>=0.115,<1", "uvicorn>=0.30,<1", "cryptography>=50,<51"]
+
+[project.optional-dependencies]
+claude = ["claude-agent-sdk==0.2.163"]
+security = ["bandit>=1.8,<2", "pip-audit>=2.9,<3"]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2", "httpx>=0.27,<1"]
+
+[project.scripts]
+engineering-keygen = "engineering.keygen:main"
+engineering = "engineering.cli:main"
+engineering-worker = "engineering.worker:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = ["integration: requires a local Temporal server"]

@@ -1,0 +1,6 @@
+{
+  "workflow_id": "claude-ambiguous-1",
+  "unsigned_approval_rejected": true,
+  "stage_after": "awaiting_apply",
+  "revision": 1
+}

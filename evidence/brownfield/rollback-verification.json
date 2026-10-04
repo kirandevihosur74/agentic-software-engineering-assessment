@@ -1,0 +1,23 @@
+{
+  "workflow_id": "claude-brownfield-1",
+  "stage": "plan",
+  "requirement_version": 3,
+  "rollbacks": 1,
+  "matches_baseline": true,
+  "expected": {
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/codes.py": "304b5702687076ab4e1e4213339aca0abf4bfe9d5aa0783a2a9fbd4dbdca653c",
+    "app/db.py": "45d901c96ac9b79421fd049c2bf3e80eaf55093369d6d48bb2fe803fba9d21ed",
+    "app/main.py": "de418b69079bc9f3a501ff51b16fb3afb7d972d100314a8e7d665ec18e5c6e83",
+    "tests/conftest.py": "7797a0c9251c3b06a7f20b656ddece38851488657414921f2ab7a1ea4696f56f",
+    "tests/test_links.py": "0edf43bf3796337c3becd859f093f20a443d8bbd2f18407217223a7e20a10eb5"
+  },
+  "actual": {
+    "app/db.py": "45d901c96ac9b79421fd049c2bf3e80eaf55093369d6d48bb2fe803fba9d21ed",
+    "app/codes.py": "304b5702687076ab4e1e4213339aca0abf4bfe9d5aa0783a2a9fbd4dbdca653c",
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/main.py": "de418b69079bc9f3a501ff51b16fb3afb7d972d100314a8e7d665ec18e5c6e83",
+    "tests/conftest.py": "7797a0c9251c3b06a7f20b656ddece38851488657414921f2ab7a1ea4696f56f",
+    "tests/test_links.py": "0edf43bf3796337c3becd859f093f20a443d8bbd2f18407217223a7e20a10eb5"
+  }
+}

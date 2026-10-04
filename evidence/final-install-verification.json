@@ -1,0 +1,23 @@
+{
+  "environment": "Fresh Python 3.13 virtual environment; clean copied source on macOS",
+  "install": "Passed with requirements-tested.txt and dev,claude,security extras",
+  "pip_check": "No broken requirements found",
+  "tests": {
+    "passed": 56,
+    "seconds": 12.63,
+    "temporal_integration": "Existing local Temporal server"
+  },
+  "cli_checks": [
+    "engineering --help",
+    "engineering-keygen --help"
+  ],
+  "application_evidence": {
+    "greenfield": 15,
+    "brownfield": 36,
+    "ambiguous": 15
+  },
+  "limitations": [
+    "Not a clean OS or Temporal server installation",
+    "Model calls are evidenced by the completed live workflows, not rerun during package installation"
+  ]
+}
